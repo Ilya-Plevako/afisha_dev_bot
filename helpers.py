@@ -48,10 +48,16 @@ def setup():
 
 # Get tg_bot token
 # Костыль: заменить на os.getenv и библиотеку dotenv, и передавать в нее токен
+# def get_bot_token():
+#     f = open('setup', mode='r', encoding='UTF-8')
+#     token = f.read()
+#     f.close()
+#     return token
+
 def get_bot_token():
-    f = open('setup', mode='r', encoding='UTF-8')
-    token = f.read()
-    f.close()
+
+    token = '5446452718:AAEzA4YucWKS2468I6EumCEjUH3lqj2UZhw'
+
     return token
 
 
