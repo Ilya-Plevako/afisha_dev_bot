@@ -4,8 +4,6 @@ import telebot
 from telebot import TeleBot
 from telebot.types import InlineKeyboardMarkup, InlineKeyboardButton
 
-
-
 # Костыль: перейти на getenv
 token = helpers.get_bot_token()
 bot: TeleBot = telebot.TeleBot(token)
@@ -19,9 +17,10 @@ def start(message, res=False):
     else:
         user = message.from_user.first_name
 
-    bot.send_message(message.chat.id, f'Hi, @{user}!\n '
-                                      f'/status - статусы\n'
-                                      f'take dev - забрать dev\n'
+    bot.send_message(message.chat.id, f'Привет, @{user}!\n'
+                                      f'Доступные команды: \n'
+                                      f'/status - статусы тестовых сред\n'
+                                      f'take dev - забронировать dev\n'
                                       f'free dev - освободить dev\n')
 
 
@@ -40,25 +39,23 @@ def take_dev(message):
     candidate_chat_id = message.chat.id
     dev_username, dev_user_chat_id = helpers.get_dev_user(dev)
 
-
     # Проверяем, что dev существует
     if helpers.get_dev_status(dev) is False:
         bot.reply_to(message, f'{dev} не существует!')
 
-
     # Проверяем, что dev занят
     # Если False, то записываем запрашивающего хозяином и возвращаем ему ответ с успешным статусом
     elif helpers.check_dev_busy(dev) is False:
-        answer = helpers.set_dev_user(dev, candidate_username, candidate_chat_id)    
+        answer = helpers.set_dev_user(dev, candidate_username, candidate_chat_id)
         bot.reply_to(message, answer)
 
-    
     # Если True и там кто-то уже есть.
     else:
         # Пишем запрашивающему сообщение о том, что dev занят и кем
         bot.reply_to(message, f'{dev} занят @{dev_username}. Запрашиваю разрешение...')
+
         # Создаем объект Inline-клавиатуры
-        
+
         def gen_markup():
             markup = InlineKeyboardMarkup()
             markup.row_width = 2
@@ -68,29 +65,30 @@ def take_dev(message):
             markup.one_time_keyboard = True
             return markup
 
-
         # Создаем обработчик колбеков нажатий и логику
         @bot.callback_query_handler(func=lambda call: True)
         def callback_query(call):
             # Прокидываем данные из колбека внутрь функции
             action, dev, candidate_username, candidate_chat_id = call.data.split("_")
-            
+
             if action == 'yes':
                 bot.answer_callback_query(call.id, "Спасибо :)")
                 helpers.free_dev(dev)
                 answer = helpers.set_dev_user(dev, candidate_username, candidate_chat_id)
-                bot.edit_message_text(chat_id=call.message.chat.id, message_id=call.message.message_id, text=f'Отдал {dev} -> @{candidate_username}')
+                bot.edit_message_text(chat_id=call.message.chat.id, message_id=call.message.message_id,
+                                      text=f'Отдал {dev} -> @{candidate_username}')
                 bot.send_message(candidate_chat_id, answer)
             else:
                 bot.answer_callback_query(call.id, "Ну ладно :)")
-                bot.edit_message_text(chat_id=call.message.chat.id, message_id=call.message.message_id, text=f'Оставил {dev}')
+                bot.edit_message_text(chat_id=call.message.chat.id, message_id=call.message.message_id,
+                                      text=f'Оставил {dev}')
                 # bot.edit_message_reply_markup(call.from_user.id, call.message.message_id, reply_markup=())
                 bot.send_message(candidate_chat_id, f'Подожди, {dev} еще нужен!')
 
-
         # Отправляем запрос хозяину dev и пушим инлайн-клавиатуру
-        bot.send_message(dev_user_chat_id, f'@{candidate_username} хочет отобрать у тебя {dev}!', reply_markup=gen_markup())
-        
+        bot.send_message(dev_user_chat_id, f'@{candidate_username} хочет отобрать у тебя {dev}!',
+                         reply_markup=gen_markup())
+
 
 # Освободить dev по сообщению 'free dev(номер)' разбирается регуляркой
 @bot.message_handler(regexp='[Ff]ree [Dd]ev[0-9]')

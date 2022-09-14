@@ -1,5 +1,5 @@
 clone:
-		git clone https://github.com/vobla13/devbot
+		git clone https://github.com/Ilya-Plevako/afisha_dev_bot
 
 
 update:
@@ -11,4 +11,4 @@ install:
 
 
 run:
-		python3 -m devbot.py
+		python3 -m afisha_dev_bot.py
