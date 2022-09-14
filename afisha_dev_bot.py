@@ -11,8 +11,8 @@ bot: TeleBot = telebot.TeleBot(token)
 
 # Ответ на команду /start
 @bot.message_handler(commands=['start'])
-def start(message, res=False):
-    if message.from_user.username != '':
+def start(message):
+    if message.from_user.username is not None:
         user = message.from_user.username
     else:
         user = message.from_user.first_name
@@ -26,7 +26,7 @@ def start(message, res=False):
 
 # Получить статусы по всем dev в одном сообщении командой /status
 @bot.message_handler(commands=['status'])
-def status(message, res=False):
+def status(message):
     answer = helpers.get_all_status()
     bot.reply_to(message, answer)
 
@@ -59,7 +59,7 @@ def take_dev(message):
         def gen_markup():
             markup = InlineKeyboardMarkup()
             markup.row_width = 2
-            # В данных колбеков передаем команду и данные кандидата
+            # В данные колбеков передаем команду и данные кандидата
             markup.add(InlineKeyboardButton("Yes", callback_data=f'yes_{dev}_{candidate_username}_{candidate_chat_id}'),
                        InlineKeyboardButton("No", callback_data=f'no_{dev}_{candidate_username}_{candidate_chat_id}'))
             markup.one_time_keyboard = True
@@ -92,7 +92,7 @@ def take_dev(message):
 
 # Освободить dev по сообщению 'free dev(номер)' разбирается регуляркой
 @bot.message_handler(regexp='[Ff]ree [Dd]ev[0-9]')
-def free_dev(message, res=False):
+def free_dev(message):
     dev = message.text[5:].lower()
     answer = helpers.free_dev(dev)
     bot.reply_to(message, answer)
@@ -100,7 +100,7 @@ def free_dev(message, res=False):
 
 # Возвращает пользователя на dev (для отладки)
 @bot.message_handler(regexp='[Uu]ser [Dd]ev[0-9]')
-def user_dev(message, res=False):
+def user_dev(message):
     dev = message.text[5:].lower()
     dev_username, dev_user_chat_id = helpers.get_dev_user(dev)
     answer = f'@{dev_username} -> {dev_user_chat_id}'
@@ -109,7 +109,7 @@ def user_dev(message, res=False):
 
 # Устанавливает дефолтные настройки в файл data
 @bot.message_handler(commands=['reset'])
-def setup_default(message, res=False):
+def setup_default(message):
     helpers.setup()
     bot.reply_to(message, 'Установлены дефолтные настройки')
 

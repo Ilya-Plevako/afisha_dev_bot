@@ -1,8 +1,5 @@
 import pickle
 from datetime import datetime
-from datetime import timedelta
-
-
 
 
 # Функция преобразования datetime в удобочитаемый формат
@@ -14,7 +11,7 @@ def timedelta_format(duration):
     return days, hours, minutes, seconds
 
 
-# Сохранем devs в файл
+# Сохраняем devs в файл
 def save_state(devs):
     with open('data', 'wb') as f:
         pickle.dump(devs, f)

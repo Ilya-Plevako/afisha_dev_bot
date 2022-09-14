@@ -8,6 +8,6 @@ RUN pip install --no-cache-dir -r requirements.txt
 
 COPY setup setup
 COPY helpers.py helpers.py
-COPY devbot.py devbot.py
+COPY afisha_dev_bot.py afisha_dev_bot.py
 
-CMD ["python", "./devbot.py"]
+CMD ["python", "./afisha_dev_bot.py"]
