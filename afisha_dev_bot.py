@@ -20,8 +20,8 @@ def start(message):
     bot.send_message(message.chat.id, f'Привет, @{user}!\n'
                                       f'Доступные команды: \n'
                                       f'/status - статусы тестовых сред\n'
-                                      f'take dev - забронировать dev\n'
-                                      f'free dev - освободить dev\n')
+                                      f'take devX - забронировать dev №X\n'
+                                      f'free devX - освободить dev №X\n')
 
 
 # Получить статусы по всем dev в одном сообщении командой /status
@@ -43,6 +43,9 @@ def take_dev(message):
     if helpers.get_dev_status(dev) is False:
         bot.reply_to(message, f'{dev} не существует!')
 
+    elif str(candidate_chat_id) == dev_user_chat_id:
+        bot.reply_to(message, f"{dev} и так твой!")
+
     # Проверяем, что dev занят
     # Если False, то записываем запрашивающего хозяином и возвращаем ему ответ с успешным статусом
     elif helpers.check_dev_busy(dev) is False:
@@ -60,40 +63,74 @@ def take_dev(message):
             markup = InlineKeyboardMarkup()
             markup.row_width = 2
             # В данные колбеков передаем команду и данные кандидата
-            markup.add(InlineKeyboardButton("Yes", callback_data=f'yes_{dev}_{candidate_username}_{candidate_chat_id}'),
-                       InlineKeyboardButton("No", callback_data=f'no_{dev}_{candidate_username}_{candidate_chat_id}'))
+            markup.add(InlineKeyboardButton("Отдать", callback_data=f'yes_{dev}_{candidate_chat_id}_{candidate_username}'),
+                       InlineKeyboardButton("Оставить себе", callback_data=f'no_{dev}_{candidate_chat_id}_{candidate_username}'))
             markup.one_time_keyboard = True
             return markup
 
         # Создаем обработчик колбеков нажатий и логику
-        @bot.callback_query_handler(func=lambda call: True)
+        @bot.callback_query_handler(func=lambda call: call.data[:3] == 'yes' or call.data[:2] == 'no')
         def callback_query(call):
             # Прокидываем данные из колбека внутрь функции
-            action, dev, candidate_username, candidate_chat_id = call.data.split("_")
+
+            action, dev, candidate_chat_id, candidate_username = call.data.split("_", 3)
 
             if action == 'yes':
                 bot.answer_callback_query(call.id, "Спасибо :)")
                 helpers.free_dev(dev)
-                answer = helpers.set_dev_user(dev, candidate_username, candidate_chat_id)
+                helpers.set_dev_user(dev, candidate_username, candidate_chat_id)
                 bot.edit_message_text(chat_id=call.message.chat.id, message_id=call.message.message_id,
-                                      text=f'Отдал {dev} -> @{candidate_username}')
-                bot.send_message(candidate_chat_id, answer)
+                                      text=f'Спасибо, что отдал {dev} коллеге @{candidate_username}')
+                bot.send_message(candidate_chat_id, f'Ура, {dev} теперь в твоём распоряжении!')
             else:
                 bot.answer_callback_query(call.id, "Ну ладно :)")
+
+                markup_refuse_time = InlineKeyboardMarkup()
+                markup_refuse_time.add(InlineKeyboardButton("15 минут", callback_data=f'min15'),
+                                       InlineKeyboardButton("1 час", callback_data=f'min60'),
+                                       InlineKeyboardButton("Не скоро", callback_data=f'min999'))
+                markup_refuse_time.one_time_keyboard = True
+                bot.send_message(call.message.chat.id, text='Через сколько сможешь освободить?', reply_markup=markup_refuse_time)
+
                 bot.edit_message_text(chat_id=call.message.chat.id, message_id=call.message.message_id,
-                                      text=f'Оставил {dev}')
-                # bot.edit_message_reply_markup(call.from_user.id, call.message.message_id, reply_markup=())
-                bot.send_message(candidate_chat_id, f'Подожди, {dev} еще нужен!')
+                                      text=f'{dev} остался твоим')
+                # bot.send_message(candidate_chat_id, f'Подожди, {dev} еще нужен!')
 
         # Отправляем запрос хозяину dev и пушим инлайн-клавиатуру
-        bot.send_message(dev_user_chat_id, f'@{candidate_username} хочет отобрать у тебя {dev}!',
+        bot.send_message(dev_user_chat_id, f'@{candidate_username} хочет взять у тебя {dev}!',
                          reply_markup=gen_markup())
 
+        @bot.callback_query_handler(func=lambda call: call.data[:3] == 'min')
+        def callback_query(call):
+            if call.message:
+                if call.data == "min15":
+                    bot.send_message(candidate_chat_id, text=f'{dev} еще нужен, подожди 15 минут, пожалуйста')
+                    bot.edit_message_text(chat_id=call.message.chat.id, message_id=call.message.message_id,
+                                          text=f'Спасибо!')
+                if call.data == "min60":
+                    bot.send_message(candidate_chat_id, text=f'{dev} еще нужен, подожди 1 час, пожалуйста')
+                if call.data == "min999":
+                    bot.send_message(candidate_chat_id, text=f'{dev} нужен на целый день, можешь взять другой dev, пожалуйста?')
 
-# Освободить dev по сообщению 'free dev(номер)' разбирается регуляркой
-@bot.message_handler(regexp='[Ff]ree [Dd]ev[0-9]')
+
+# Освободить dev по сообщению 'free dev(номер)' только владельцем dev
+@bot.message_handler(regexp='^[Ff]ree [Dd]ev[0-9]')
 def free_dev(message):
     dev = message.text[5:].lower()
+    user, time, chat_id = helpers.get_dev_status(dev)
+    if user == 'free':
+        bot.reply_to(message, f'{dev} не был занят.')
+    elif message.chat.id == chat_id:
+        answer = helpers.free_dev(dev)
+        bot.reply_to(message, answer)
+    else:
+        bot.reply_to(message, f'{dev} занят.\nИспользуй take {dev}, чтобы запросить его использование')
+
+
+# Освободить dev по сообщению 'hard free dev(номер)' (для отладки)
+@bot.message_handler(regexp='^[Hh]ard [Ff]ree [Dd]ev[0-9]')
+def hard_free_dev(message):
+    dev = message.text[10:].lower()
     answer = helpers.free_dev(dev)
     bot.reply_to(message, answer)
 

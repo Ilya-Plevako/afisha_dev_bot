@@ -114,7 +114,7 @@ def set_dev_user(dev, user, chat_id):
         current_dev['time'] = datetime.now()
         current_dev['chat_id'] = chat_id
         save_state(devs)
-        return f'{dev} занял @{user}'
+        return f'Теперь {dev} занял @{user}'
     else:
         return f'{dev} не существует!'
 
