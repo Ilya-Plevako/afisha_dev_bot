@@ -67,7 +67,7 @@ def get_dev_user(dev):
         chat_id = current_dev.get('chat_id')
         return user, chat_id
     else:
-        return None
+        return None, None
 
 
 # Get <dev> status

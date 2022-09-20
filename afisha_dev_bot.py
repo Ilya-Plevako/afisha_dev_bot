@@ -43,7 +43,7 @@ def take_dev(message):
     if helpers.get_dev_status(dev) is False:
         bot.reply_to(message, f'{dev} не существует!')
 
-    elif str(candidate_chat_id) == dev_user_chat_id:
+    elif str(candidate_chat_id) == str(dev_user_chat_id):
         bot.reply_to(message, f"{dev} и так твой!")
 
     # Проверяем, что dev занят
@@ -124,7 +124,7 @@ def free_dev(message):
         answer = helpers.free_dev(dev)
         bot.reply_to(message, answer)
     else:
-        bot.reply_to(message, f'{dev} занят.\nИспользуй take {dev}, чтобы запросить его использование')
+        bot.reply_to(message, f'{dev} занят не тобой.\nИспользуй take {dev}, чтобы запросить его использование')
 
 
 # Освободить dev по сообщению 'hard free dev(номер)' (для отладки)
