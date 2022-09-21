@@ -1,3 +1,4 @@
+import json
 import os.path
 import helpers
 import telebot
@@ -57,60 +58,104 @@ def take_dev(message):
         # Пишем запрашивающему сообщение о том, что dev занят и кем
         bot.reply_to(message, f'{dev} занят @{dev_username}. Запрашиваю разрешение...')
 
-        # Создаем объект Inline-клавиатуры
-
-        def gen_markup():
-            markup = InlineKeyboardMarkup()
-            markup.row_width = 2
-            # В данные колбеков передаем команду и данные кандидата
-            markup.add(InlineKeyboardButton("Отдать", callback_data=f'yes_{dev}_{candidate_chat_id}_{candidate_username}'),
-                       InlineKeyboardButton("Оставить себе", callback_data=f'no_{dev}_{candidate_chat_id}_{candidate_username}'))
-            markup.one_time_keyboard = True
-            return markup
+        # Отправляем запрос хозяину dev
+        ask_owner_to_take_dev_to_candidate(dev, candidate_username, dev_user_chat_id, candidate_chat_id)
 
         # Создаем обработчик колбеков нажатий и логику
-        @bot.callback_query_handler(func=lambda call: call.data[:3] == 'yes' or call.data[:2] == 'no')
-        def callback_query(call):
-            # Прокидываем данные из колбека внутрь функции
+        # @bot.callback_query_handler(func=lambda call: call.data[:3] == 'yes' or call.data[:2] == 'no')
+        # def callback_query(call):
+        #     # Прокидываем данные из колбека внутрь функции
+        #
+        #     action, dev, candidate_chat_id, candidate_username = call.data.split("_", 3)
+        #
+        #     if action == 'yes':
+        #         pass
+        # bot.answer_callback_query(call.id, "Спасибо :)")
+        # helpers.free_dev(dev)
+        # helpers.set_dev_user(dev, candidate_username, candidate_chat_id)
+        # bot.edit_message_text(chat_id=call.message.chat.id, message_id=call.message.message_id,
+        #                       text=f'Спасибо, что отдал {dev} коллеге @{candidate_username}')
+        # bot.send_message(candidate_chat_id, f'Ура, {dev} теперь в твоём распоряжении!')
+        #     else:
+        #         bot.answer_callback_query(call.id, "Ну ладно :)")
+        #         markup_refuse = InlineKeyboardMarkup()
+        #         markup_refuse.add(InlineKeyboardButton("15 минут", callback_data=f'min15'),
+        #                                InlineKeyboardButton("1 час", callback_data=f'min60'),
+        #                                InlineKeyboardButton("Не скоро", callback_data=f'min999'))
+        #         markup_refuse.one_time_keyboard = True
+        #         bot.send_message(call.message.chat.id, text='Через сколько сможешь освободить?', reply_markup=markup_refuse)
+        #
+        #         bot.edit_message_text(chat_id=call.message.chat.id, message_id=call.message.message_id,
+        #                               text=f'{dev} остался твоим')
+        #         # bot.send_message(candidate_chat_id, f'Подожди, {dev} еще нужен!')
+        #
+        # @bot.callback_query_handler(func=lambda call: call.data[:3] == 'min')
+        # def callback_query(call):
+        #     if call.message:
+        #         if call.data == "min15":
+        #             bot.send_message(candidate_chat_id, text=f'{dev} еще нужен, подожди 15 минут, пожалуйста')
+        #             bot.edit_message_text(chat_id=call.message.chat.id, message_id=call.message.message_id,
+        #                                   text=f'Спасибо!')
+        #         if call.data == "min60":
+        #             bot.send_message(candidate_chat_id, text=f'{dev} еще нужен, подожди 1 час, пожалуйста')
+        #         if call.data == "min999":
+        #             bot.send_message(candidate_chat_id, text=f'{dev} нужен на целый день, можешь взять другой dev, пожалуйста?')
 
-            action, dev, candidate_chat_id, candidate_username = call.data.split("_", 3)
 
-            if action == 'yes':
-                bot.answer_callback_query(call.id, "Спасибо :)")
-                helpers.free_dev(dev)
-                helpers.set_dev_user(dev, candidate_username, candidate_chat_id)
-                bot.edit_message_text(chat_id=call.message.chat.id, message_id=call.message.message_id,
-                                      text=f'Спасибо, что отдал {dev} коллеге @{candidate_username}')
-                bot.send_message(candidate_chat_id, f'Ура, {dev} теперь в твоём распоряжении!')
-            else:
-                bot.answer_callback_query(call.id, "Ну ладно :)")
+def ask_owner_to_take_dev_to_candidate(dev, candidate_username, dev_user_chat_id, candidate_chat_id):
+    markup = InlineKeyboardMarkup()
+    markup.row_width = 2
+    # В данные колбеков передаем команду и данные кандидата
+    markup.add(InlineKeyboardButton("Отдать", callback_data=f'yes_{dev}_{candidate_chat_id}_{candidate_username}'),
+               InlineKeyboardButton("Оставить себе", callback_data=f'no_{dev}_{candidate_chat_id}_{candidate_username}'))
+    markup.one_time_keyboard = True
 
-                markup_refuse_time = InlineKeyboardMarkup()
-                markup_refuse_time.add(InlineKeyboardButton("15 минут", callback_data=f'min15'),
-                                       InlineKeyboardButton("1 час", callback_data=f'min60'),
-                                       InlineKeyboardButton("Не скоро", callback_data=f'min999'))
-                markup_refuse_time.one_time_keyboard = True
-                bot.send_message(call.message.chat.id, text='Через сколько сможешь освободить?', reply_markup=markup_refuse_time)
+    bot.send_message(dev_user_chat_id, f'@{candidate_username} хочет взять у тебя {dev}!',
+                     reply_markup=markup)
 
-                bot.edit_message_text(chat_id=call.message.chat.id, message_id=call.message.message_id,
-                                      text=f'{dev} остался твоим')
-                # bot.send_message(candidate_chat_id, f'Подожди, {dev} еще нужен!')
 
-        # Отправляем запрос хозяину dev и пушим инлайн-клавиатуру
-        bot.send_message(dev_user_chat_id, f'@{candidate_username} хочет взять у тебя {dev}!',
-                         reply_markup=gen_markup())
+@bot.callback_query_handler(func=lambda call: call.data[:3] == 'yes')
+def take_dev_from_owner_to_candidate(call):
+    action, dev, candidate_chat_id, candidate_username = call.data.split("_", 3)
+    bot.answer_callback_query(call.id, "Спасибо :)")
+    helpers.free_dev(dev)
+    helpers.set_dev_user(dev, candidate_username, candidate_chat_id)
+    bot.edit_message_text(chat_id=call.message.chat.id, message_id=call.message.message_id,
+                          text=f'Спасибо, что отдал {dev} коллеге @{candidate_username}')
+    bot.send_message(candidate_chat_id, f'Ура, {dev} теперь в твоём распоряжении!')
 
-        @bot.callback_query_handler(func=lambda call: call.data[:3] == 'min')
-        def callback_query(call):
-            if call.message:
-                if call.data == "min15":
-                    bot.send_message(candidate_chat_id, text=f'{dev} еще нужен, подожди 15 минут, пожалуйста')
-                    bot.edit_message_text(chat_id=call.message.chat.id, message_id=call.message.message_id,
-                                          text=f'Спасибо!')
-                if call.data == "min60":
-                    bot.send_message(candidate_chat_id, text=f'{dev} еще нужен, подожди 1 час, пожалуйста')
-                if call.data == "min999":
-                    bot.send_message(candidate_chat_id, text=f'{dev} нужен на целый день, можешь взять другой dev, пожалуйста?')
+
+@bot.callback_query_handler(func=lambda call: call.data[:2] == 'no')
+def refuse_to_take_dev_from_owner_to_candidate(call):
+    action, dev, candidate_chat_id, candidate_username = call.data.split("_", 3)
+    bot.answer_callback_query(call.id, "Ну ладно :)")
+    markup_refuse = InlineKeyboardMarkup()
+    markup_refuse.add(InlineKeyboardButton("15 минут", callback_data=f'min15_{dev}_{candidate_chat_id}_{candidate_username}'),
+                      InlineKeyboardButton("1 час", callback_data=f'min60_{dev}_{candidate_chat_id}_{candidate_username}'),
+                      InlineKeyboardButton("Не скоро", callback_data=f'min99_{dev}_{candidate_chat_id}_{candidate_username}'))
+    markup_refuse.one_time_keyboard = True
+    bot.send_message(call.message.chat.id, text='Через сколько сможешь освободить?', reply_markup=markup_refuse)
+
+    bot.edit_message_text(chat_id=call.message.chat.id, message_id=call.message.message_id,
+                          text=f'{dev} остался твоим')
+
+
+@bot.callback_query_handler(func=lambda call: call.data[:3] == 'min')
+def request_additional_time_for_owner_using(call):
+    time, dev, candidate_chat_id, candidate_username = call.data.split("_", 3)
+    if call.message:
+        if time == "min15":
+            bot.send_message(candidate_chat_id, text=f'{dev} еще нужен, подожди 15 минут, пожалуйста')
+            bot.edit_message_text(chat_id=call.message.chat.id, message_id=call.message.message_id,
+                                  text=f'Время использования продлено на 15 минут.')
+        if time == "min60":
+            bot.send_message(candidate_chat_id, text=f'{dev} еще нужен, подожди 1 час, пожалуйста')
+            bot.edit_message_text(chat_id=call.message.chat.id, message_id=call.message.message_id,
+                                  text=f'Время использования продлено на 1 час.')
+        if time == "min99":
+            bot.send_message(candidate_chat_id, text=f'{dev} нужен на целый день, возьми, пожалуйста другой dev')
+            bot.edit_message_text(chat_id=call.message.chat.id, message_id=call.message.message_id,
+                                  text=f'Время использования продлено до конца рабочего дня.')
 
 
 # Освободить dev по сообщению 'free dev(номер)' только владельцем dev
