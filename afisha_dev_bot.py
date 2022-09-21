@@ -31,7 +31,7 @@ def status(message):
     bot.reply_to(message, answer)
 
 
-# Занять dev по сообщению 'take dev(номер)'разбирается регуляркой
+# Занять dev по сообщению 'take dev(номер)' разбирается регуляркой
 @bot.message_handler(regexp='[Tt]ake [Dd]ev[0-9]')
 def take_dev(message):
     dev = message.text[5:].lower()
