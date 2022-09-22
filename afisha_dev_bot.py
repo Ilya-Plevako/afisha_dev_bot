@@ -136,8 +136,7 @@ def refuse_to_take_dev_from_owner_to_candidate(call):
     markup_refuse.one_time_keyboard = True
     bot.send_message(call.message.chat.id, text='Через сколько сможешь освободить?', reply_markup=markup_refuse)
 
-    bot.edit_message_text(chat_id=call.message.chat.id, message_id=call.message.message_id,
-                          text=f'{dev} остался твоим')
+    bot.delete_message(chat_id=call.message.chat.id, message_id=call.message.message_id)
 
 
 @bot.callback_query_handler(func=lambda call: call.data[:3] == 'min')
@@ -165,7 +164,7 @@ def free_dev(message):
     user, time, chat_id = helpers.get_dev_status(dev)
     if user == 'free':
         bot.reply_to(message, f'{dev} не был занят.')
-    elif message.chat.id == chat_id:
+    elif str(message.chat.id) == str(chat_id):
         answer = helpers.free_dev(dev)
         bot.reply_to(message, answer)
     else:
